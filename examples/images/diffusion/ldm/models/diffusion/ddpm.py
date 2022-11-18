@@ -1,3 +1,6 @@
+import os
+
+import psutil
 import torch
 import torch.nn as nn
 import numpy as np
@@ -42,6 +45,11 @@ from einops import rearrange, repeat
 __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
                          'adm': 'y'}
+
+
+
+def get_memory():
+    return psutil.Process(os.getpid()).memory_info()[0]/(2.**30)
 
 
 def disabled_train(self, mode=True):
@@ -408,7 +416,9 @@ class DDPM(pl.LightningModule):
         return loss, loss_dict
 
     def training_step(self, batch, batch_idx):
+        print(f"DDPM.training_step | 1: {get_memory()}")
         loss, loss_dict = self.shared_step(batch)
+        print(f"DDPM.training_step | 2: {get_memory()}")
 
         self.log_dict(loss_dict, prog_bar=True,
                       logger=True, on_step=True, on_epoch=True)
@@ -416,10 +426,12 @@ class DDPM(pl.LightningModule):
         self.log("global_step", self.global_step,
                  prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
+        print(f"DDPM.training_step | 3: {get_memory()}")
         if self.use_scheduler:
             lr = self.optimizers().param_groups[0]['lr']
             self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
+        print(f"DDPM.training_step | 4: {get_memory()}")
         return loss
 
     @torch.no_grad()
@@ -972,8 +984,11 @@ class LatentDiffusion(DDPM):
             return self.first_stage_model.encode(x)
 
     def shared_step(self, batch, **kwargs):
+        print(f"LatentDiffusion.shared_step | 1: {get_memory()}")
         x, c = self.get_input(batch, self.first_stage_key)
+        print(f"LatentDiffusion.shared_step | 2: {get_memory()}")
         loss = self(x, c)
+        print(f"LatentDiffusion.shared_step | 3: {get_memory()}")
         return loss
 
     def forward(self, x, c, *args, **kwargs):
@@ -1119,7 +1134,9 @@ class LatentDiffusion(DDPM):
     def p_losses(self, x_start, cond, t, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        print(f"LatentDiffusion.p_losses | memory 1: {get_memory()}")
         model_output = self.apply_model(x_noisy, t, cond)
+        print(f"LatentDiffusion.p_losses | memory 2: {get_memory()}")
 
         loss_dict = {}
         prefix = 'train' if self.training else 'val'
@@ -1133,6 +1150,7 @@ class LatentDiffusion(DDPM):
 
         loss_simple = self.get_loss(model_output, target, mean=False).mean([1, 2, 3])
         loss_dict.update({f'{prefix}/loss_simple': loss_simple.mean()})
+        print(f"LatentDiffusion.p_losses | memory 3: {get_memory()}")
 
         logvar_t = self.logvar[t].to(self.device)
         loss = loss_simple / torch.exp(logvar_t) + logvar_t
@@ -1142,12 +1160,16 @@ class LatentDiffusion(DDPM):
             loss_dict.update({'logvar': self.logvar.data.mean()})
 
         loss = self.l_simple_weight * loss.mean()
+        print(f"LatentDiffusion.p_losses | memory 4: {get_memory()}")
 
         loss_vlb = self.get_loss(model_output, target, mean=False).mean(dim=(1, 2, 3))
         loss_vlb = (self.lvlb_weights[t] * loss_vlb).mean()
         loss_dict.update({f'{prefix}/loss_vlb': loss_vlb})
+        print(f"LatentDiffusion.p_losses | memory 5: {get_memory()}")
         loss += (self.original_elbo_weight * loss_vlb)
         loss_dict.update({f'{prefix}/loss': loss})
+
+        print(f"LatentDiffusion.p_losses | memory -1: {get_memory()}")
 
         return loss, loss_dict
 

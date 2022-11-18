@@ -7,6 +7,9 @@ import os
 import numpy as np
 import cv2
 
+from ldm.models.diffusion.ddpm import get_memory
+
+
 class Txt2ImgIterableBaseDataset(IterableDataset):
     '''
     Define an interface to make the IterableDatasets for text2img data chainable
@@ -38,8 +41,10 @@ class Txt2ImgIterableBaseDataset(IterableDataset):
         return self.end - self.start
 
     def __iter__(self):
+        print(f"Txt2ImgIterableBaseDataset.__iter__ | 1: {get_memory()}")
         sample_iterator = self._sample_generator(self.start, self.end)
         # sample_iterator = self._sample_generator(self.iter_start, self.iter_end)
+        print(f"Txt2ImgIterableBaseDataset.__iter__ | 2: {get_memory()}")
         return sample_iterator
 
     def _sample_generator(self, start, end):

@@ -1,0 +1,14 @@
+{
+    "count": 20,
+    "successes": 17,
+    "failed_to_download": 3,
+    "failed_to_resize": 0,
+    "duration": 0.8330299854278564,
+    "start_time": 1668527479.3274689,
+    "end_time": 1668527480.1604989,
+    "status_dict": {
+        "'ascii' codec can't encode character '\\xf6' in position 72: ordinal not in range(128)": 2,
+        "'ascii' codec can't encode character '\\xf6' in position 38: ordinal not in range(128)": 1,
+        "success": 17
+    }
+}

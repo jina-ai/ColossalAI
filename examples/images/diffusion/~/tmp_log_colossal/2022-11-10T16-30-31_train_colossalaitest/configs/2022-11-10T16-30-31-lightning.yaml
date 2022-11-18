@@ -1,0 +1,27 @@
+lightning:
+  trainer:
+    accelerator: gpu
+    devices: 1
+    log_gpu_memory: all
+    max_epochs: 2
+    precision: 16
+    auto_select_gpus: false
+    strategy:
+      target: pytorch_lightning.strategies.ColossalAIStrategy
+      params:
+        use_chunk: false
+        enable_distributed_storage: True,
+        placement_policy: cuda
+        force_outputs_fp32: false
+    log_every_n_steps: 2
+    logger: true
+    default_root_dir: /tmp/diff_log/
+    profiler: pytorch
+  logger_config:
+    wandb:
+      target: pytorch_lightning.loggers.WandbLogger
+      params:
+        name: nowname
+        save_dir: /tmp/diff_log/
+        offline: opt.debug
+        id: nowname
