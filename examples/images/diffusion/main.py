@@ -28,7 +28,6 @@ from clip.model import Bottleneck
 from transformers.models.clip.modeling_clip import CLIPTextTransformer
 
 from ldm.data.base import Txt2ImgIterableBaseDataset
-from ldm.models.diffusion.ddpm import get_memory
 from ldm.util import instantiate_from_config
 import clip
 from einops import rearrange, repeat
@@ -454,76 +453,6 @@ class ImageLogger(Callback):
                 self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
 
 
-class DebugCallback(Callback):
-    def __init__(self, position: int):
-        super().__init__()
-        self._position = position
-
-    def on_train_epoch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_train_epoch_start {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_train_epoch_end {self._position} | RAM memory: {get_memory()} GB")
-
-    def setup(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
-        print(f"DebugCallback.setup {self._position} | RAM memory: {get_memory()} GB")
-
-    def teardown(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str) -> None:
-        print(f"DebugCallback.teardown {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_fit_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_fit_start {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_fit_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_fit_end {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_sanity_check_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_sanity_check_start {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_sanity_check_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_sanity_check_end {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_train_batch_start(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", batch: Any, batch_idx: int
-    ) -> None:
-        print(f"DebugCallback.on_train_batch_start {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_train_batch_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch: Any, batch_idx: int
-    ) -> None:
-        print(f"DebugCallback.on_train_batch_end {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_validation_epoch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_validation_epoch_start {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_validation_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_validation_epoch_end {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_train_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_train_start {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_train_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_train_end {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_save_checkpoint(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", checkpoint: Dict[str, Any]
-    ) -> None:
-        print(f"DebugCallback.on_save_checkpoint {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_before_backward(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", loss) -> None:
-        print(f"DebugCallback.on_before_backward {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_after_backward(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        print(f"DebugCallback.on_after_backward {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_before_optimizer_step(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", optimizer, opt_idx: int
-    ) -> None:
-        print(f"DebugCallback.on_before_optimizer_step {self._position} | RAM memory: {get_memory()} GB")
-
-    def on_before_zero_grad(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", optimizer) -> None:
-        print(f"DebugCallback.on_before_zero_grad {self._position} | RAM memory: {get_memory()} GB")
-
 
 class CUDACallback(Callback):
     # see https://github.com/SeanNaren/minGPT/blob/master/mingpt/callback.py
@@ -536,14 +465,11 @@ class CUDACallback(Callback):
 
     def on_train_epoch_start(self, trainer, pl_module):
         # Reset the memory use counter
-        print(f"CUDACallback.on_train_epoch_start | 1: {get_memory()}")
         torch.cuda.reset_peak_memory_stats(trainer.strategy.root_device.index)
         torch.cuda.synchronize(trainer.strategy.root_device.index)
         self.start_time = time.time()
-        print(f"CUDACallback.on_train_epoch_start | -1: {get_memory()}")
 
     def on_train_epoch_end(self, trainer, pl_module):
-        print(f"CUDACallback.on_train_epoch_end | 1: {get_memory()}")
         torch.cuda.synchronize(trainer.strategy.root_device.index)
         max_memory = torch.cuda.max_memory_allocated(trainer.strategy.root_device.index) / 2 ** 20
         epoch_time = time.time() - self.start_time
@@ -556,7 +482,6 @@ class CUDACallback(Callback):
             rank_zero_info(f"Average Peak memory {max_memory:.2f}MiB")
         except AttributeError:
             pass
-        print(f"CUDACallback.on_train_epoch_end | -1: {get_memory()}")
 
 
 if __name__ == "__main__":
@@ -695,7 +620,7 @@ if __name__ == "__main__":
         # default logger configs
         default_logger_cfgs = {
             # "wandb": {
-            #     "target": "pytorch_lightning.loggers.WandbLogger",
+            #     "target": "lightning.pytorch.loggers.WandbLogger",
             #     "params": {
             #         "name": nowname,
             #         "save_dir": logdir,
@@ -756,7 +681,7 @@ if __name__ == "__main__":
         if "modelcheckpoint" in lightning_config:
             modelckpt_cfg = lightning_config.modelcheckpoint
         else:
-            modelckpt_cfg =  OmegaConf.create()
+            modelckpt_cfg = OmegaConf.create()
         modelckpt_cfg = OmegaConf.merge(default_modelckpt_cfg, modelckpt_cfg)
         print(f"Merged modelckpt-cfg: \n{modelckpt_cfg}")
         if version.parse(pl.__version__) < version.parse('1.4.0'):
@@ -764,12 +689,6 @@ if __name__ == "__main__":
 
         # add callback which sets up log directory
         default_callbacks_cfg = {
-            "debug_callback_0": {
-                "target": "main.DebugCallback",
-                "params": {
-                    "position": 0
-                }
-            },
             "setup_callback": {
                 "target": "main.SetupCallback",
                 "params": {
@@ -780,12 +699,6 @@ if __name__ == "__main__":
                     "cfgdir": cfgdir,
                     "config": config,
                     "lightning_config": lightning_config,
-                }
-            },
-            "debug_callback_1": {
-                "target": "main.DebugCallback",
-                "params": {
-                    "position": 1
                 }
             },
             # "image_logger": {
@@ -804,31 +717,13 @@ if __name__ == "__main__":
                     # "log_momentum": True
                 }
             },
-            "debug_callback_2": {
-                "target": "main.DebugCallback",
-                "params": {
-                    "position": 2
-                }
-            },
             "cuda_callback": {
                 "target": "main.CUDACallback"
             },
-            "debug_callback_3": {
-                "target": "main.DebugCallback",
-                "params": {
-                    "position": 3
-                }
-            },
             "device_stats_monitor": {
-                "target": "pytorch_lightning.callbacks.DeviceStatsMonitor",
+                "target": "lightning.pytorch.callbacks.DeviceStatsMonitor",
                 "params": {
                     "cpu_stats": True
-                }
-            },
-            "debug_callback_4": {
-                "target": "main.DebugCallback",
-                "params": {
-                    "position": 4
                 }
             },
         }
@@ -836,12 +731,6 @@ if __name__ == "__main__":
             default_callbacks_cfg.update(
                 {
                     'checkpoint_callback': modelckpt_cfg,
-                    "debug_callback_5": {
-                        "target": "main.DebugCallback",
-                        "params": {
-                            "position": 5
-                        }
-                    },
                 })
 
         if "callbacks" in lightning_config:
@@ -849,23 +738,23 @@ if __name__ == "__main__":
         else:
             callbacks_cfg = OmegaConf.create()
 
-        # if 'metrics_over_trainsteps_checkpoint' in callbacks_cfg:
-        #     print(
-        #         'Caution: Saving checkpoints every n train steps without deleting. This might require some free space.')
-        #     default_metrics_over_trainsteps_ckpt_dict = {
-        #         'metrics_over_trainsteps_checkpoint':
-        #             {"target": 'lightning.pytorch.callbacks.ModelCheckpoint',
-        #              'params': {
-        #                  "dirpath": os.path.join(ckptdir, 'trainstep_checkpoints'),
-        #                  "filename": "{epoch:06}-{step:09}",
-        #                  "verbose": True,
-        #                  'save_top_k': -1,
-        #                  'every_n_train_steps': 10000,
-        #                  'save_weights_only': True
-        #              }
-        #              }
-        #     }
-        #     default_callbacks_cfg.update(default_metrics_over_trainsteps_ckpt_dict)
+        if 'metrics_over_trainsteps_checkpoint' in callbacks_cfg:
+            print(
+                'Caution: Saving checkpoints every n train steps without deleting. This might require some free space.')
+            default_metrics_over_trainsteps_ckpt_dict = {
+                'metrics_over_trainsteps_checkpoint':
+                    {"target": 'lightning.pytorch.callbacks.ModelCheckpoint',
+                     'params': {
+                         "dirpath": os.path.join(ckptdir, 'trainstep_checkpoints'),
+                         "filename": "{epoch:06}-{step:09}",
+                         "verbose": True,
+                         'save_top_k': -1,
+                         'every_n_train_steps': 10000,
+                         'save_weights_only': True
+                     }
+                     }
+            }
+            default_callbacks_cfg.update(default_metrics_over_trainsteps_ckpt_dict)
 
         callbacks_cfg = OmegaConf.merge(default_callbacks_cfg, callbacks_cfg)
         if 'ignore_keys_callback' in callbacks_cfg and hasattr(trainer_opt, 'resume_from_checkpoint'):

@@ -77,7 +77,7 @@ data:
   target: main.DataModuleFromConfig
   params:
     num_workers: 48
-    batch_size: 4
+    batch_size: 16
     wrap: False
     train:
       target: ldm.data.base.Txt2ImgIterableBaseDataset
@@ -95,12 +95,13 @@ lightning:
     precision: 16
     auto_select_gpus: False
     strategy:
-      target: pytorch_lightning.strategies.ColossalAIStrategy
+      target: lightning.pytorch.strategies.ColossalAIStrategy
       params:
         use_chunk: False
-        enable_distributed_storage: False,
+        enable_distributed_storage: True,
         placement_policy: cuda
         force_outputs_fp32: False
+
     log_every_n_steps: 2
     logger: True
     default_root_dir: "/home/joschka/tmp/diff_log/"
@@ -108,7 +109,7 @@ lightning:
 
   logger_config:
     wandb:
-      target: pytorch_lightning.loggers.WandbLogger
+      target: lightning.pytorch.loggers.WandbLogger
       params:
           name: nowname
           save_dir: "/home/joschka/tmp/diff_log/"

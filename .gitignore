@@ -141,3 +141,14 @@ docs/.build
 
 # pytorch checkpoint
 *.pt
+
+# data in diffusion example
+examples/images/diffusion/data/**/*.jpg
+examples/images/diffusion/data/**/*.jpeg
+examples/images/diffusion/data/**/*.png
+examples/images/diffusion/data/**/*.txt
+examples/images/diffusion/data/**/*.json
+examples/images/diffusion/data/*.jpg
+examples/images/diffusion/data/*.jpeg
+examples/images/diffusion/data/*.png
+examples/images/diffusion/outputs/txt2img-samples/samples/*.png
